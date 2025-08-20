@@ -5,6 +5,11 @@ import { Person } from './person.entity';
 import { AppController } from './app.controller';
 import { CreatePersonHandler } from './commands/handlers/create-person.handler';
 import { GetPersonHandler } from './queries/handlers/get-person.handler';
+import { Admin } from './admin.entity';
+import { FormConfig } from './form-config.entity';
+import { FormRecord } from './form-record.entity';
+import { AdminController } from './admin.controller';
+import { FormConfigController } from './form-config.controller';
 
 @Module({
   imports: [
@@ -12,12 +17,12 @@ import { GetPersonHandler } from './queries/handlers/get-person.handler';
     TypeOrmModule.forRoot({
       type: 'sqlite',
       database: 'data/database.sqlite',
-      entities: [Person],
+      entities: [Person, Admin, FormConfig, FormRecord],
       synchronize: true,
     }),
-    TypeOrmModule.forFeature([Person]),
+    TypeOrmModule.forFeature([Person, Admin, FormConfig, FormRecord]),
   ],
-  controllers: [AppController],
+  controllers: [AppController, AdminController, FormConfigController],
   providers: [CreatePersonHandler, GetPersonHandler],
 })
 export class AppModule {}
