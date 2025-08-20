@@ -2,24 +2,63 @@
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>Hello</title>
+  <title>Dynamic Forms</title>
   <link rel="stylesheet" href="/style.css">
 </head>
 <body>
-  <div class="container">
-    <h1>Hello Lookup</h1>
-    <input id="who" placeholder="Enter simple name" />
-    <button onclick="sayHello()">Say Hello</button>
-    <p id="result"></p>
-    <a href="add.html">Add Name</a>
-  </div>
+  <div class="container" id="formsContainer"></div>
   <script>
-    async function sayHello() {
-      const who = document.getElementById('who').value;
-      const res = await fetch('/hello?who=' + encodeURIComponent(who));
-      const data = await res.json();
-      document.getElementById('result').innerText = data.message;
+    async function loadForms(){
+      const res = await fetch('/api/form-configs');
+      const configs = await res.json();
+      const container = document.getElementById('formsContainer');
+      container.innerHTML='';
+      configs.forEach(cfg=>{
+        const form=document.createElement('form');
+        form.innerHTML='<h2>'+cfg.name+'</h2>';
+        const fields=JSON.parse(cfg.fields);
+        fields.forEach(f=>{
+          const label=document.createElement('label'); label.textContent=f.label; form.appendChild(label);
+          let input;
+          switch(f.type){
+            case 'textarea': input=document.createElement('textarea'); break;
+            case 'date': input=document.createElement('input'); input.type='date'; break;
+            case 'select':
+              input=document.createElement('select');
+              (f.options||[]).forEach(o=>{const opt=document.createElement('option'); opt.value=o; opt.textContent=o; input.appendChild(opt);});
+              break;
+            case 'radio':
+              input=document.createElement('div');
+              (f.options||[]).forEach(o=>{const r=document.createElement('input'); r.type='radio'; r.name=f.id; r.value=o; const l=document.createElement('label'); l.textContent=o; input.appendChild(r); input.appendChild(l);});
+              break;
+            default:
+              input=document.createElement('input'); input.type='text';
+          }
+          input.id=f.id;
+          form.appendChild(input);
+          form.appendChild(document.createElement('br'));
+        });
+        const btn=document.createElement('button'); btn.type='submit'; btn.textContent='Submit';
+        form.appendChild(btn);
+        form.addEventListener('submit', async e=>{
+          e.preventDefault();
+          const data={};
+          fields.forEach(f=>{
+            if(f.type==='radio'){
+              const checked=form.querySelector('input[name="'+f.id+'"]:checked');
+              data[f.id]=checked?checked.value:null;
+            } else {
+              data[f.id]=form.querySelector('#'+f.id).value;
+            }
+          });
+          await fetch('/api/form-configs/'+cfg.id+'/records',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
+          alert('Saved');
+          form.reset();
+        });
+        container.appendChild(form);
+      });
     }
+    loadForms();
   </script>
 </body>
 </html>

@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Admin Panel</title>
+  <link rel="stylesheet" href="/style.css">
+  <style>
+    body { margin:0; font-family: Arial, sans-serif; }
+    #panel { display:none; height:100vh; }
+    .toolbar { width:200px; background:#2c3e50; color:white; padding:20px; box-sizing:border-box; }
+    .toolbar h2 { color:white; }
+    .content { flex:1; padding:20px; overflow:auto; }
+    #layout { display:flex; height:100%; }
+    table { width:100%; border-collapse: collapse; margin-top:10px; }
+    th, td { border:1px solid #ccc; padding:8px; text-align:left; }
+  </style>
+</head>
+<body>
+<div id="login">
+  <h2>Admin Login</h2>
+  <input id="username" placeholder="Username"/><br/>
+  <input id="password" type="password" placeholder="Password"/><br/>
+  <button onclick="login()">Login</button>
+  <p id="loginStatus"></p>
+</div>
+<div id="panel">
+  <div id="layout">
+    <div class="toolbar">
+      <h2>Admin</h2>
+      <div>Form Configs</div>
+    </div>
+    <div class="content">
+      <h2>Form Configurations</h2>
+      <form onsubmit="createConfig(event)">
+        <input id="cfgName" placeholder="Form name" required/>
+        <input id="cfgSeq" type="number" placeholder="Sequence" required/>
+        <textarea id="cfgFields" placeholder='[ {"id":"field1","label":"Name","type":"text"} ]' rows="3" style="width:100%;"></textarea>
+        <button type="submit">Save Config</button>
+      </form>
+      <table id="configTable"></table>
+      <h3>Preview</h3>
+      <div id="preview"></div>
+    </div>
+  </div>
+</div>
+<script>
+async function login() {
+  const username = document.getElementById('username').value;
+  const password = document.getElementById('password').value;
+  const res = await fetch('/api/admin/login', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({username, password})});
+  const data = await res.json();
+  if(data.success){
+    document.getElementById('login').style.display='none';
+    document.getElementById('panel').style.display='block';
+    loadConfigs();
+  } else {
+    document.getElementById('loginStatus').innerText='Invalid credentials';
+  }
+}
+async function loadConfigs(){
+  const res = await fetch('/api/form-configs');
+  const configs = await res.json();
+  const table = document.getElementById('configTable');
+  table.innerHTML='<tr><th>Name</th><th>Sequence</th><th>Export</th></tr>';
+  configs.forEach(cfg=>{
+    const tr=document.createElement('tr');
+    tr.innerHTML=`<td>${cfg.name}</td><td>${cfg.sequence}</td><td><button onclick="exportCfg(${cfg.id})">Export</button></td>`;
+    tr.onclick=()=>showPreview(cfg);
+    table.appendChild(tr);
+  });
+}
+function showPreview(cfg){
+  const container=document.getElementById('preview');
+  container.innerHTML='';
+  const fields=JSON.parse(cfg.fields);
+  renderFields(container, fields);
+}
+function renderFields(container, fields){
+  const form=document.createElement('form');
+  fields.forEach(f=>{
+    const label=document.createElement('label');
+    label.textContent=f.label;
+    form.appendChild(label);
+    let input;
+    switch(f.type){
+      case 'textarea':
+        input=document.createElement('textarea'); break;
+      case 'date':
+        input=document.createElement('input'); input.type='date'; break;
+      case 'select':
+        input=document.createElement('select');
+        f.options.forEach(o=>{const opt=document.createElement('option'); opt.value=o; opt.textContent=o; input.appendChild(opt);});
+        break;
+      case 'radio':
+        input=document.createElement('div');
+        f.options.forEach(o=>{const r=document.createElement('input'); r.type='radio'; r.name=f.id; r.value=o; const l=document.createElement('label'); l.textContent=o; input.appendChild(r); input.appendChild(l);});
+        break;
+      default:
+        input=document.createElement('input'); input.type='text';
+    }
+    input.id=f.id;
+    form.appendChild(input);
+    form.appendChild(document.createElement('br'));
+  });
+  container.appendChild(form);
+}
+async function createConfig(e){
+  e.preventDefault();
+  const name=document.getElementById('cfgName').value;
+  const sequence=parseInt(document.getElementById('cfgSeq').value,10);
+  const fields=JSON.parse(document.getElementById('cfgFields').value || '[]');
+  await fetch('/api/form-configs',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,sequence,fields})});
+  loadConfigs();
+  e.target.reset();
+}
+function exportCfg(id){
+  window.location='/api/form-configs/'+id+'/export';
+}
+</script>
+</body>
+</html>
