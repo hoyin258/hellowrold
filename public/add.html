@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Add Name</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <div class="container">
+    <h1>Add Name</h1>
+    <input id="simpleName" placeholder="Simple name" /><br/>
+    <input id="fullName" placeholder="Full name" /><br/>
+    <button onclick="save()">Save</button>
+    <p id="status"></p>
+    <a href="index.html">Back</a>
+  </div>
+  <script>
+    async function save() {
+      const simpleName = document.getElementById('simpleName').value;
+      const fullName = document.getElementById('fullName').value;
+      const res = await fetch('/people', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ simpleName, fullName })
+      });
+      if (res.ok) {
+        document.getElementById('status').innerText = 'Saved!';
+      } else {
+        document.getElementById('status').innerText = 'Error saving';
+      }
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Hello</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <div class="container">
+    <h1>Hello Lookup</h1>
+    <input id="who" placeholder="Enter simple name" />
+    <button onclick="sayHello()">Say Hello</button>
+    <p id="result"></p>
+    <a href="add.html">Add Name</a>
+  </div>
+  <script>
+    async function sayHello() {
+      const who = document.getElementById('who').value;
+      const res = await fetch('/hello?who=' + encodeURIComponent(who));
+      const data = await res.json();
+      document.getElementById('result').innerText = data.message;
+    }
+  </script>
+</body>
+</html>
