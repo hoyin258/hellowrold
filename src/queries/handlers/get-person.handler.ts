@@ -11,7 +11,7 @@ export class GetPersonHandler implements IQueryHandler<GetPersonQuery> {
     private readonly repo: Repository<Person>,
   ) {}
 
-  async execute(query: GetPersonQuery): Promise<Person | undefined> {
+  async execute(query: GetPersonQuery): Promise<Person | null> {
     return this.repo.findOne({ where: { simpleName: query.simpleName } });
   }
 }
