@@ -5,7 +5,7 @@ export class FormRecord {
   @ObjectIdColumn()
   id!: ObjectId;
 
-  @Column()
+  @Column(() => ObjectId)
   formId!: ObjectId;
 
   @Column()
