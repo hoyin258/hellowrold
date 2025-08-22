@@ -1,6 +1,6 @@
 import { IQueryHandler, QueryHandler } from '@nestjs/cqrs';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { MongoRepository } from 'typeorm';
 import { GetPersonQuery } from '../get-person.query';
 import { Person } from '../../person.entity';
 
@@ -8,7 +8,7 @@ import { Person } from '../../person.entity';
 export class GetPersonHandler implements IQueryHandler<GetPersonQuery> {
   constructor(
     @InjectRepository(Person)
-    private readonly repo: Repository<Person>,
+    private readonly repo: MongoRepository<Person>,
   ) {}
 
   async execute(query: GetPersonQuery): Promise<Person | null> {

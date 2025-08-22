@@ -4,61 +4,109 @@
   <meta charset="UTF-8">
   <title>Dynamic Forms</title>
   <link rel="stylesheet" href="/style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500&display=swap" rel="stylesheet">
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+  <script src="https://unpkg.com/@mui/material@5.15.8/umd/material-ui.development.js" crossorigin></script>
+  <script src="https://unpkg.com/@emotion/react@11.11.1/umd/emotion-react.umd.min.js" crossorigin></script>
+  <script src="https://unpkg.com/@emotion/styled@11.11.0/umd/emotion-styled.umd.min.js" crossorigin></script>
+  <script src="https://unpkg.com/babel-standalone@6/babel.min.js"></script>
 </head>
 <body>
-  <div class="container" id="formsContainer"></div>
-  <script>
-    async function loadForms(){
-      const res = await fetch('/api/form-configs');
-      const configs = await res.json();
-      const container = document.getElementById('formsContainer');
-      container.innerHTML='';
-      configs.forEach(cfg=>{
-        const form=document.createElement('form');
-        form.innerHTML='<h2>'+cfg.name+'</h2>';
-        const fields=JSON.parse(cfg.fields);
-        fields.forEach(f=>{
-          const label=document.createElement('label'); label.textContent=f.label; form.appendChild(label);
-          let input;
-          switch(f.type){
-            case 'textarea': input=document.createElement('textarea'); break;
-            case 'date': input=document.createElement('input'); input.type='date'; break;
-            case 'select':
-              input=document.createElement('select');
-              (f.options||[]).forEach(o=>{const opt=document.createElement('option'); opt.value=o; opt.textContent=o; input.appendChild(opt);});
-              break;
-            case 'radio':
-              input=document.createElement('div');
-              (f.options||[]).forEach(o=>{const r=document.createElement('input'); r.type='radio'; r.name=f.id; r.value=o; const l=document.createElement('label'); l.textContent=o; input.appendChild(r); input.appendChild(l);});
-              break;
-            default:
-              input=document.createElement('input'); input.type='text';
-          }
-          input.id=f.id;
-          form.appendChild(input);
-          form.appendChild(document.createElement('br'));
+  <div id="root"></div>
+  <script type="text/babel">
+    const { useState, useEffect } = React;
+    const { Tabs, Tab, Box, TextField, Button, MenuItem, RadioGroup, FormControlLabel, Radio, FormLabel, Select, InputLabel } = MaterialUI;
+
+    function App(){
+      const [configs, setConfigs] = useState([]);
+      const [current, setCurrent] = useState(0);
+
+      useEffect(() => {
+        fetch('/api/form-configs').then(r=>r.json()).then(data=>setConfigs(data));
+      }, []);
+
+      const handleSubmit = async (cfg, values) => {
+        await fetch(`/api/form-configs/${cfg.id}/records`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(values)
         });
-        const btn=document.createElement('button'); btn.type='submit'; btn.textContent='Submit';
-        form.appendChild(btn);
-        form.addEventListener('submit', async e=>{
-          e.preventDefault();
-          const data={};
-          fields.forEach(f=>{
-            if(f.type==='radio'){
-              const checked=form.querySelector('input[name="'+f.id+'"]:checked');
-              data[f.id]=checked?checked.value:null;
-            } else {
-              data[f.id]=form.querySelector('#'+f.id).value;
-            }
-          });
-          await fetch('/api/form-configs/'+cfg.id+'/records',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
-          alert('Saved');
-          form.reset();
-        });
-        container.appendChild(form);
-      });
+        alert('Saved');
+      };
+
+      return (
+        <Box sx={{p:2}}>
+          <Tabs value={current} onChange={(e,v)=>setCurrent(v)}>
+            {configs.map((cfg, idx)=>(
+              <Tab label={cfg.name} key={cfg.id} />
+            ))}
+          </Tabs>
+          {configs[current] && (
+            <FormRenderer config={configs[current]} onSubmit={handleSubmit} />
+          )}
+        </Box>
+      );
     }
-    loadForms();
+
+    function FormRenderer({config, onSubmit}){
+      const [values, setValues] = useState({});
+      const fields = config.fields || [];
+
+      const handleChange = (id, value) => {
+        setValues(prev=>({ ...prev, [id]: value }));
+      };
+
+      const submit = (e) => {
+        e.preventDefault();
+        onSubmit(config, values);
+      };
+
+      return (
+        <Box component="form" onSubmit={submit} sx={{mt:2, p:2, border:'1px solid #ccc', borderRadius:1}}>
+          {fields.map(f=>(
+            <Box key={f.id} sx={{mb:2}}>
+              {renderField(f, values[f.id] || '', (val)=>handleChange(f.id, val))}
+            </Box>
+          ))}
+          <Button type="submit" variant="contained">Submit</Button>
+        </Box>
+      );
+    }
+
+    function renderField(f, value, onChange){
+      switch(f.type){
+        case 'textarea':
+          return <TextField fullWidth multiline label={f.label} value={value} onChange={e=>onChange(e.target.value)} />;
+        case 'date':
+          return <TextField fullWidth type="date" label={f.label} InputLabelProps={{ shrink:true }} value={value} onChange={e=>onChange(e.target.value)} />;
+        case 'select':
+          return (
+            <TextField select fullWidth label={f.label} value={value} onChange={e=>onChange(e.target.value)}>
+              {(f.options||[]).map(o=>(
+                <MenuItem key={o} value={o}>{o}</MenuItem>
+              ))}
+            </TextField>
+          );
+        case 'radio':
+          return (
+            <Box>
+              <FormLabel>{f.label}</FormLabel>
+              <RadioGroup value={value} onChange={e=>onChange(e.target.value)}>
+                {(f.options||[]).map(o=>(
+                  <FormControlLabel key={o} value={o} control={<Radio />} label={o} />
+                ))}
+              </RadioGroup>
+            </Box>
+          );
+        default:
+          return <TextField fullWidth label={f.label} value={value} onChange={e=>onChange(e.target.value)} />;
+      }
+    }
+
+    ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
   </script>
 </body>
 </html>

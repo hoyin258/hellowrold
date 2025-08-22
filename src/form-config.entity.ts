@@ -1,9 +1,9 @@
-import { Entity, PrimaryGeneratedColumn, Column } from 'typeorm';
+import { Entity, ObjectIdColumn, ObjectId, Column } from 'typeorm';
 
 @Entity()
 export class FormConfig {
-  @PrimaryGeneratedColumn()
-  id!: number;
+  @ObjectIdColumn()
+  id!: ObjectId;
 
   @Column()
   name!: string;
@@ -11,6 +11,6 @@ export class FormConfig {
   @Column({ default: 0 })
   sequence!: number;
 
-  @Column('text')
-  fields!: string; // JSON string defining fields
+  @Column()
+  fields!: any[]; // Array defining fields
 }

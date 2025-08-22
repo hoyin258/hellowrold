@@ -15,8 +15,8 @@ import { FormConfigController } from './form-config.controller';
   imports: [
     CqrsModule,
     TypeOrmModule.forRoot({
-      type: 'sqlite',
-      database: 'data/database.sqlite',
+      type: 'mongodb',
+      url: process.env.MONGO_URL || 'mongodb://localhost:27017/forms',
       entities: [Person, Admin, FormConfig, FormRecord],
       synchronize: true,
     }),

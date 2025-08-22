@@ -1,6 +1,6 @@
 import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { MongoRepository } from 'typeorm';
 import { CreatePersonCommand } from '../create-person.command';
 import { Person } from '../../person.entity';
 
@@ -8,7 +8,7 @@ import { Person } from '../../person.entity';
 export class CreatePersonHandler implements ICommandHandler<CreatePersonCommand> {
   constructor(
     @InjectRepository(Person)
-    private readonly repo: Repository<Person>,
+    private readonly repo: MongoRepository<Person>,
   ) {}
 
   async execute(command: CreatePersonCommand) {

@@ -1,11 +1,11 @@
 import { Controller, Post, Body, OnModuleInit } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { MongoRepository } from 'typeorm';
 import { Admin } from './admin.entity';
 
 @Controller('api/admin')
 export class AdminController implements OnModuleInit {
-  constructor(@InjectRepository(Admin) private repo: Repository<Admin>) {}
+  constructor(@InjectRepository(Admin) private repo: MongoRepository<Admin>) {}
 
   async onModuleInit() {
     const count = await this.repo.count();

@@ -1,14 +1,13 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne } from 'typeorm';
-import { FormConfig } from './form-config.entity';
+import { Entity, ObjectIdColumn, ObjectId, Column } from 'typeorm';
 
 @Entity()
 export class FormRecord {
-  @PrimaryGeneratedColumn()
-  id!: number;
+  @ObjectIdColumn()
+  id!: ObjectId;
 
-  @ManyToOne(() => FormConfig, { onDelete: 'CASCADE' })
-  form!: FormConfig;
+  @Column()
+  formId!: ObjectId;
 
-  @Column('text')
-  data!: string; // JSON of submitted values
+  @Column()
+  data!: any; // submitted values
 }
