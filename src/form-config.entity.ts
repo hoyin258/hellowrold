@@ -3,14 +3,23 @@ import { Entity, ObjectIdColumn, ObjectId, Column } from 'typeorm';
 @Entity()
 export class FormConfig {
   @ObjectIdColumn()
-  id!: ObjectId;
+  _id!: ObjectId;
 
   @Column()
-  name!: string;
+  formCd!: string;
+
+  @Column()
+  formVersion!: string;
 
   @Column({ default: 0 })
-  sequence!: number;
+  displaySeq!: number;
 
   @Column()
-  fields!: any[]; // Array defining fields
+  fields!: {
+    fieldId: string;
+    fieldName: string;
+    label: string;
+    type: string;
+    option: string[];
+  }[]; // Array defining fields
 }

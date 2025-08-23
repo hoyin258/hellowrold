@@ -27,9 +27,17 @@
       const [username, setUsername] = useState('');
       const [password, setPassword] = useState('');
 
-      const [name, setName] = useState('');
-      const [sequence, setSequence] = useState('');
+      const [formCd, setFormCd] = useState('');
+      const [formVersion, setFormVersion] = useState('');
+      const [displaySeq, setDisplaySeq] = useState('');
       const [fields, setFields] = useState([]);
+
+      useEffect(()=>{
+        if(localStorage.getItem('loggedIn')==='true'){
+          setLoggedIn(true);
+          loadConfigs();
+        }
+      },[]);
 
       const login = async () => {
         const res = await fetch('/api/admin/login', {
@@ -40,6 +48,7 @@
         const data = await res.json();
         if(data.success){
           setLoggedIn(true);
+          localStorage.setItem('loggedIn','true');
           loadConfigs();
         } else {
           alert('Invalid credentials');
@@ -52,7 +61,7 @@
       };
 
       const addField = () => {
-        setFields([...fields, { id:'', label:'', type:'text', options:'' }]);
+        setFields([...fields, { fieldId:'', fieldName:'', label:'', type:'text', option:[] }]);
       };
 
       const updateField = (idx, key, value) => {
@@ -69,25 +78,32 @@
 
       const saveConfig = async () => {
         const payload = {
-          name,
-          sequence: Number(sequence),
+          formCd,
+          formVersion,
+          displaySeq: Number(displaySeq),
           fields: fields.map(f=>({
-            id: f.id,
+            fieldId: f.fieldId,
+            fieldName: f.fieldName,
             label: f.label,
             type: f.type,
-            options: f.options ? f.options.split(',').map(o=>o.trim()).filter(o=>o) : []
+            option: f.option
           }))
         };
         await fetch('/api/form-configs',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
-        setName(''); setSequence(''); setFields([]);
+        setFormCd(''); setFormVersion(''); setDisplaySeq(''); setFields([]);
         loadConfigs();
+      };
+
+      const logout = () => {
+        localStorage.removeItem('loggedIn');
+        setLoggedIn(false);
       };
 
       if(!loggedIn){
         return (
-          <Box sx={{p:2, maxWidth:400, m:'auto'}}>
-            <TextField fullWidth label="Username" margin="normal" value={username} onChange={e=>setUsername(e.target.value)} />
-            <TextField fullWidth type="password" label="Password" margin="normal" value={password} onChange={e=>setPassword(e.target.value)} />
+          <Box sx={{p:2, maxWidth:400, m:'auto'}} component="form" autoComplete="off">
+            <TextField fullWidth label="Username" margin="normal" value={username} onChange={e=>setUsername(e.target.value)} autoComplete="off" InputLabelProps={{shrink:true}} />
+            <TextField fullWidth type="password" label="Password" margin="normal" value={password} onChange={e=>setPassword(e.target.value)} autoComplete="new-password" InputLabelProps={{shrink:true}} />
             <Button variant="contained" onClick={login}>Login</Button>
           </Box>
         );
@@ -97,28 +113,42 @@
         <Box sx={{display:'flex', height:'100vh'}}>
           <Box sx={{width:250, bgcolor:'#2c3e50', color:'white', p:2}}>
             <h2>Admin</h2>
-            <Button variant="contained" color="secondary" onClick={addField}>Add Field</Button>
+            <Button variant="contained" color="secondary" onClick={logout}>Logout</Button>
           </Box>
           <Box sx={{flex:1, p:2, overflow:'auto'}}>
             <h2>Form Configurations</h2>
-            <Box sx={{mb:2}}>
-              <TextField label="Form name" value={name} onChange={e=>setName(e.target.value)} sx={{mr:2}} />
-              <TextField type="number" label="Sequence" value={sequence} onChange={e=>setSequence(e.target.value)} />
+            <Box sx={{mb:2, display:'flex', gap:2, flexWrap:'wrap'}}>
+              <TextField label="Form Code" value={formCd} onChange={e=>setFormCd(e.target.value)} />
+              <TextField label="Form Version" value={formVersion} onChange={e=>setFormVersion(e.target.value)} />
+              <TextField type="number" label="Display Seq" value={displaySeq} onChange={e=>setDisplaySeq(e.target.value)} />
             </Box>
             {fields.map((f, idx)=>(
               <FieldEditor key={idx} field={f} onChange={(key,val)=>updateField(idx,key,val)} onRemove={()=>removeField(idx)} />
             ))}
+            <Button variant="outlined" onClick={addField} sx={{mt:1}}>Add Field</Button>
+            {fields.length>0 && (
+              <Table sx={{mt:2}}>
+                <TableHead>
+                  <TableRow><TableCell>Field Name</TableCell><TableCell>Type</TableCell></TableRow>
+                </TableHead>
+                <TableBody>
+                  {fields.map((f,idx)=>(
+                    <TableRow key={idx}><TableCell>{f.fieldName}</TableCell><TableCell>{f.type}</TableCell></TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
             <Button variant="contained" onClick={saveConfig} sx={{mt:2}}>Save Config</Button>
             <Table sx={{mt:4}}>
               <TableHead>
-                <TableRow><TableCell>Name</TableCell><TableCell>Sequence</TableCell><TableCell>Export</TableCell></TableRow>
+                <TableRow><TableCell>Form Code</TableCell><TableCell>Display Seq</TableCell><TableCell>Export</TableCell></TableRow>
               </TableHead>
               <TableBody>
                 {configs.map(cfg=>(
-                  <TableRow key={cfg.id}>
-                    <TableCell>{cfg.name}</TableCell>
-                    <TableCell>{cfg.sequence}</TableCell>
-                    <TableCell><Button onClick={()=>window.location=`/api/form-configs/${cfg.id}/export`}>Export</Button></TableCell>
+                  <TableRow key={cfg._id}>
+                    <TableCell>{cfg.formCd}</TableCell>
+                    <TableCell>{cfg.displaySeq}</TableCell>
+                    <TableCell><Button onClick={()=>window.location=`/api/form-configs/${cfg._id}/export`}>Export</Button></TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -129,9 +159,21 @@
     }
 
     function FieldEditor({field, onChange, onRemove}){
+      const addOption = () => onChange('option', [...(field.option||[]), '']);
+      const updateOption = (idx, val) => {
+        const copy = field.option.slice();
+        copy[idx] = val;
+        onChange('option', copy);
+      };
+      const removeOption = (idx) => {
+        const copy = field.option.slice();
+        copy.splice(idx,1);
+        onChange('option', copy);
+      };
       return (
-        <Box sx={{display:'flex', gap:1, mb:1, p:1, border:'1px solid #ccc', borderRadius:1}}>
-          <TextField label="Id" value={field.id} onChange={e=>onChange('id', e.target.value)} />
+        <Box sx={{display:'flex', gap:1, mb:1, p:1, border:'1px solid #ccc', borderRadius:1, flexWrap:'wrap'}}>
+          <TextField label="Field Id" value={field.fieldId} onChange={e=>onChange('fieldId', e.target.value)} />
+          <TextField label="Field Name" value={field.fieldName} onChange={e=>onChange('fieldName', e.target.value)} />
           <TextField label="Label" value={field.label} onChange={e=>onChange('label', e.target.value)} />
           <Select value={field.type} onChange={e=>onChange('type', e.target.value)}>
             <MenuItem value="text">Text</MenuItem>
@@ -141,7 +183,15 @@
             <MenuItem value="radio">Radio</MenuItem>
           </Select>
           {(field.type === 'select' || field.type === 'radio') && (
-            <TextField label="Options (comma separated)" value={field.options} onChange={e=>onChange('options', e.target.value)} />
+            <Box sx={{display:'flex', flexDirection:'column'}}>
+              {(field.option||[]).map((opt,idx)=>(
+                <Box key={idx} sx={{display:'flex', alignItems:'center'}}>
+                  <TextField label={`Option ${idx+1}`} value={opt} onChange={e=>updateOption(idx,e.target.value)} />
+                  <IconButton onClick={()=>removeOption(idx)}>x</IconButton>
+                </Box>
+              ))}
+              <Button onClick={addOption}>Add Option</Button>
+            </Box>
           )}
           <Button color="error" onClick={onRemove}>Remove</Button>
         </Box>

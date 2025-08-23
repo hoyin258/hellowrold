@@ -16,17 +16,29 @@ export class FormConfigController {
 
   @Get('form-configs')
   getConfigs() {
-    return this.configRepo.find({ order: { sequence: 1 as any } });
+    return this.configRepo.find({ order: { displaySeq: 1 as any } });
   }
 
   @Post('form-configs')
   createConfig(
     @Body()
-    body: { name: string; sequence: number; fields: any[] },
+    body: {
+      formCd: string;
+      formVersion: string;
+      displaySeq: number;
+      fields: {
+        fieldId: string;
+        fieldName: string;
+        label: string;
+        type: string;
+        option: string[];
+      }[];
+    },
   ) {
     const config = this.configRepo.create({
-      name: body.name,
-      sequence: body.sequence,
+      formCd: body.formCd,
+      formVersion: body.formVersion,
+      displaySeq: body.displaySeq,
       fields: body.fields,
     });
     return this.configRepo.save(config);
@@ -45,10 +57,21 @@ export class FormConfigController {
       return { success: false };
     }
     const record = this.recordRepo.create({
-      formId: config.id,
+      formId: config._id,
       data,
     });
     await this.recordRepo.save(record);
     return { success: true };
+  }
+
+  @Get('form-configs/:id/records')
+  async listRecords(@Param('id') id: string) {
+    const formId = new ObjectId(id);
+    return this.recordRepo.find({ where: { formId } });
+  }
+
+  @Get('form-records')
+  async listAllRecords() {
+    return this.recordRepo.find();
   }
 }
