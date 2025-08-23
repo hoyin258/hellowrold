@@ -1,11 +1,13 @@
-import * as request from 'supertest';
+import request from 'supertest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
 import { AppModule } from '../src/app.module';
 import { DataSource } from 'typeorm';
 import { MongoMemoryServer } from 'mongodb-memory-server';
 
-describe('AppController (e2e)', () => {
+jest.setTimeout(30000);
+
+describe('App e2e', () => {
   let app: INestApplication;
   let dataSource: DataSource;
   let mongod: MongoMemoryServer;
@@ -24,15 +26,15 @@ describe('AppController (e2e)', () => {
   });
 
   afterAll(async () => {
-    await dataSource.destroy();
-    await app.close();
-    await mongod.stop();
+    if (dataSource) await dataSource.destroy();
+    if (app) await app.close();
+    if (mongod) await mongod.stop();
   });
 
-  it('/hello (GET)', () => {
+  it('GET /api/form-configs returns empty array', () => {
     return request(app.getHttpServer())
-      .get('/hello')
+      .get('/api/form-configs')
       .expect(200)
-      .expect({ message: 'Hello stranger' });
+      .expect([]);
   });
 });

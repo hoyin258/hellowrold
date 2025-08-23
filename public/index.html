@@ -79,12 +79,12 @@
     function renderField(f, value, onChange){
       switch(f.type){
         case 'textarea':
-          return <TextField fullWidth multiline label={f.label} value={value} onChange={e=>onChange(e.target.value)} />;
+          return <TextField fullWidth multiline label={f.label} InputLabelProps={{shrink:true}} value={value} onChange={e=>onChange(e.target.value)} />;
         case 'date':
           return <TextField fullWidth type="date" label={f.label} InputLabelProps={{ shrink:true }} value={value} onChange={e=>onChange(e.target.value)} />;
         case 'select':
           return (
-            <TextField select fullWidth label={f.label} value={value} onChange={e=>onChange(e.target.value)}>
+            <TextField select fullWidth label={f.label} InputLabelProps={{shrink:true}} value={value} onChange={e=>onChange(e.target.value)}>
               {(f.options||[]).map(o=>(
                 <MenuItem key={o} value={o}>{o}</MenuItem>
               ))}
@@ -102,7 +102,7 @@
             </Box>
           );
         default:
-          return <TextField fullWidth label={f.label} value={value} onChange={e=>onChange(e.target.value)} />;
+          return <TextField fullWidth label={f.label} InputLabelProps={{shrink:true}} value={value} onChange={e=>onChange(e.target.value)} />;
       }
     }
 

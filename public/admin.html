@@ -18,18 +18,30 @@
   <div id="root"></div>
   <script type="text/babel">
     const { useState, useEffect } = React;
-    const { Box, TextField, Button, Table, TableHead, TableRow, TableCell, TableBody, Select, MenuItem, IconButton, FormLabel, RadioGroup, Radio, FormControlLabel } = MaterialUI;
+    const { Box, TextField, Button, Table, TableHead, TableRow, TableCell, TableBody, Select, MenuItem, Checkbox, FormControlLabel } = MaterialUI;
 
     function AdminApp(){
       const [loggedIn, setLoggedIn] = useState(false);
       const [configs, setConfigs] = useState([]);
+      const [tab, setTab] = useState('design');
 
       const [username, setUsername] = useState('');
       const [password, setPassword] = useState('');
+      const [remember, setRemember] = useState(false);
 
       const [name, setName] = useState('');
       const [sequence, setSequence] = useState('');
       const [fields, setFields] = useState([]);
+
+      useEffect(() => {
+        const saved = localStorage.getItem('adminCreds');
+        if(saved){
+          const creds = JSON.parse(saved);
+          setUsername(creds.username);
+          setPassword(creds.password);
+          setRemember(true);
+        }
+      }, []);
 
       const login = async () => {
         const res = await fetch('/api/admin/login', {
@@ -39,6 +51,11 @@
         });
         const data = await res.json();
         if(data.success){
+          if(remember){
+            localStorage.setItem('adminCreds', JSON.stringify({ username, password }));
+          } else {
+            localStorage.removeItem('adminCreds');
+          }
           setLoggedIn(true);
           loadConfigs();
         } else {
@@ -49,6 +66,15 @@
       const loadConfigs = async () => {
         const res = await fetch('/api/form-configs');
         setConfigs(await res.json());
+      };
+
+      const logout = () => {
+        setLoggedIn(false);
+        setTab('design');
+        if(!remember){
+          setUsername('');
+          setPassword('');
+        }
       };
 
       const addField = () => {
@@ -86,8 +112,9 @@
       if(!loggedIn){
         return (
           <Box sx={{p:2, maxWidth:400, m:'auto'}}>
-            <TextField fullWidth label="Username" margin="normal" value={username} onChange={e=>setUsername(e.target.value)} />
-            <TextField fullWidth type="password" label="Password" margin="normal" value={password} onChange={e=>setPassword(e.target.value)} />
+            <TextField autoComplete="off" InputLabelProps={{shrink:true}} fullWidth label="Username" margin="normal" value={username} onChange={e=>setUsername(e.target.value)} />
+            <TextField autoComplete="off" InputLabelProps={{shrink:true}} fullWidth type="password" label="Password" margin="normal" value={password} onChange={e=>setPassword(e.target.value)} />
+            <FormControlLabel control={<Checkbox checked={remember} onChange={e=>setRemember(e.target.checked)} />} label="Remember me" />
             <Button variant="contained" onClick={login}>Login</Button>
           </Box>
         );
@@ -95,44 +122,55 @@
 
       return (
         <Box sx={{display:'flex', height:'100vh'}}>
-          <Box sx={{width:250, bgcolor:'#2c3e50', color:'white', p:2}}>
+          <Box sx={{width:250, bgcolor:'#2c3e50', color:'white', p:2, display:'flex', flexDirection:'column', gap:2}}>
             <h2>Admin</h2>
-            <Button variant="contained" color="secondary" onClick={addField}>Add Field</Button>
+            <Button variant="contained" color="secondary" onClick={()=>setTab('design')}>Design Form</Button>
+            <Button variant="contained" color="secondary" onClick={()=>setTab('data')}>View Data</Button>
+            <Button variant="outlined" color="inherit" onClick={logout}>Logout</Button>
           </Box>
           <Box sx={{flex:1, p:2, overflow:'auto'}}>
-            <h2>Form Configurations</h2>
-            <Box sx={{mb:2}}>
-              <TextField label="Form name" value={name} onChange={e=>setName(e.target.value)} sx={{mr:2}} />
-              <TextField type="number" label="Sequence" value={sequence} onChange={e=>setSequence(e.target.value)} />
-            </Box>
-            {fields.map((f, idx)=>(
-              <FieldEditor key={idx} field={f} onChange={(key,val)=>updateField(idx,key,val)} onRemove={()=>removeField(idx)} />
-            ))}
-            <Button variant="contained" onClick={saveConfig} sx={{mt:2}}>Save Config</Button>
-            <Table sx={{mt:4}}>
-              <TableHead>
-                <TableRow><TableCell>Name</TableCell><TableCell>Sequence</TableCell><TableCell>Export</TableCell></TableRow>
-              </TableHead>
-              <TableBody>
-                {configs.map(cfg=>(
-                  <TableRow key={cfg.id}>
-                    <TableCell>{cfg.name}</TableCell>
-                    <TableCell>{cfg.sequence}</TableCell>
-                    <TableCell><Button onClick={()=>window.location=`/api/form-configs/${cfg.id}/export`}>Export</Button></TableCell>
-                  </TableRow>
+            {tab === 'design' ? (
+              <Box>
+                <h2>Form Configurations</h2>
+                <Box sx={{mb:2}}>
+                  <TextField label="Form name" InputLabelProps={{shrink:true}} value={name} onChange={e=>setName(e.target.value)} sx={{mr:2}} />
+                  <TextField type="number" label="Sequence" InputLabelProps={{shrink:true}} value={sequence} onChange={e=>setSequence(e.target.value)} />
+                </Box>
+                {fields.map((f, idx)=>(
+                  <FieldEditor key={idx} field={f} isLast={idx===fields.length-1} onChange={(key,val)=>updateField(idx,key,val)} onRemove={()=>removeField(idx)} />
                 ))}
-              </TableBody>
-            </Table>
+                <Box sx={{mt:2}}>
+                  <Button variant="contained" color="secondary" onClick={addField} sx={{mr:2}}>Add Field</Button>
+                  <Button variant="contained" onClick={saveConfig}>Save Config</Button>
+                </Box>
+                <Table sx={{mt:4}}>
+                  <TableHead>
+                    <TableRow><TableCell>Name</TableCell><TableCell>Sequence</TableCell><TableCell>Export</TableCell></TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {configs.map(cfg=>(
+                      <TableRow key={cfg.id}>
+                        <TableCell>{cfg.name}</TableCell>
+                        <TableCell>{cfg.sequence}</TableCell>
+                        <TableCell><Button onClick={()=>window.location=`/api/form-configs/${cfg.id}/export`}>Export</Button></TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </Box>
+            ) : (
+              <RecordsViewer configs={configs} />
+            )}
           </Box>
         </Box>
       );
     }
 
-    function FieldEditor({field, onChange, onRemove}){
+    function FieldEditor({field, onChange, onRemove, isLast}){
       return (
-        <Box sx={{display:'flex', gap:1, mb:1, p:1, border:'1px solid #ccc', borderRadius:1}}>
-          <TextField label="Id" value={field.id} onChange={e=>onChange('id', e.target.value)} />
-          <TextField label="Label" value={field.label} onChange={e=>onChange('label', e.target.value)} />
+        <Box sx={{display:'flex', gap:1, p:1, border:'1px solid #ccc', borderRadius:1, mb:isLast?0:1}}>
+          <TextField label="Id" InputLabelProps={{shrink:true}} value={field.id} onChange={e=>onChange('id', e.target.value)} />
+          <TextField label="Label" InputLabelProps={{shrink:true}} value={field.label} onChange={e=>onChange('label', e.target.value)} />
           <Select value={field.type} onChange={e=>onChange('type', e.target.value)}>
             <MenuItem value="text">Text</MenuItem>
             <MenuItem value="textarea">Textarea</MenuItem>
@@ -141,9 +179,40 @@
             <MenuItem value="radio">Radio</MenuItem>
           </Select>
           {(field.type === 'select' || field.type === 'radio') && (
-            <TextField label="Options (comma separated)" value={field.options} onChange={e=>onChange('options', e.target.value)} />
+            <TextField label="Options (comma separated)" InputLabelProps={{shrink:true}} value={field.options} onChange={e=>onChange('options', e.target.value)} />
           )}
           <Button color="error" onClick={onRemove}>Remove</Button>
+        </Box>
+      );
+    }
+
+    function RecordsViewer({configs}){
+      const [configId, setConfigId] = useState('');
+      const [records, setRecords] = useState([]);
+
+      useEffect(()=>{
+        if(configId){
+          fetch(`/api/form-configs/${configId}/records`).then(r=>r.json()).then(setRecords);
+        } else {
+          setRecords([]);
+        }
+      }, [configId]);
+
+      return (
+        <Box>
+          <Select value={configId} onChange={e=>setConfigId(e.target.value)} displayEmpty>
+            <MenuItem value=""><em>Select form</em></MenuItem>
+            {configs.map(cfg => (
+              <MenuItem key={cfg.id} value={cfg.id}>{cfg.name}</MenuItem>
+            ))}
+          </Select>
+          <Box sx={{mt:2}}>
+            {records.map((r, idx)=>(
+              <Box key={idx} sx={{mb:1, p:1, border:'1px solid #ccc', borderRadius:1}}>
+                <pre>{JSON.stringify(r.data, null, 2)}</pre>
+              </Box>
+            ))}
+          </Box>
         </Box>
       );
     }

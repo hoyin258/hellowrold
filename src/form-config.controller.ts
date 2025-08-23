@@ -19,6 +19,11 @@ export class FormConfigController {
     return this.configRepo.find({ order: { sequence: 1 as any } });
   }
 
+  @Get('form-configs/:id/records')
+  async getRecords(@Param('id') id: string) {
+    return this.recordRepo.find({ where: { formId: new ObjectId(id) } });
+  }
+
   @Post('form-configs')
   createConfig(
     @Body()
